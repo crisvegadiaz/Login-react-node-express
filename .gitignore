@@ -1,0 +1,22 @@
+# Ignorar archivos y carpetas en la raíz del proyecto
+.DS_Store
+Thumbs.db
+
+# Ignorar archivos y carpetas del backend
+backend/node_modules/
+backend/dist/
+backend/src/openssl/*.pem
+
+# Ignorar archivos y carpetas del frontend
+frontend/node_modules/
+frontend/dist/
+
+# Ignorar archivos y carpetas del database
+database/mysql-data/
+
+# Ignorar archivos de logs
+*.log
+
+# Ignorar archivos de entorno
+.env
+.env.local
