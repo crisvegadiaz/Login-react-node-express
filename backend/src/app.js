@@ -64,7 +64,34 @@ app.post("/", async (req, res) => {
     }
   } catch (error) {
     console.error(`Error en la ruta de inicio de sesión: ${error.message}`);
-    res.status(500).json({ success: false, error: "Error interno del servidor" });
+    res
+      .status(500)
+      .json({ success: false, error: "Error interno del servidor" });
+  }
+});
+
+// Ruta de creación de usuario
+app.post("/creandoUser", async (req, res) => {
+  try {
+    const { name, phoneNumber, email, password } = req.body;
+
+    const create = await UsersModel.createUser({
+      name,
+      phoneNumber,
+      email,
+      password,
+    });
+
+    if (create) {
+      res.json({ create: true });
+    } else {
+      res.status(203).json({ create: false });
+    }
+  } catch (error) {
+    console.error(`Error en la ruta de creación de usuario: ${error.message}`);
+    res
+      .status(500)
+      .json({ success: false, error: "Error interno del servidor" });
   }
 });
 

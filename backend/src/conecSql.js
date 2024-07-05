@@ -53,6 +53,28 @@ class UsersModel {
       throw new Error(`Error en la consulta getUserExists: ${error.message}`);
     }
   }
+
+  static async createUser({ name, phoneNumber, email, password }) {
+    try {
+      if (!connection) {
+        throw new Error(
+          "No se ha establecido la conexión con la base de datos"
+        );
+      }
+
+      const [result] = await connection.query(
+        `INSERT INTO
+        users (user_name, phoneNumber, email, password)
+        VALUES (?, ?, ?, SHA2(?, 256))`,
+        [name, phoneNumber, email, password]
+      );
+
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.error(`Error en la consulta createUser: ${error.message}`);
+      return false;
+    }
+  }
 }
 
 export default UsersModel;

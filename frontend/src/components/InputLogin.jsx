@@ -1,12 +1,12 @@
 import { useState } from "react";
 import {
-  IconButton,
-  OutlinedInput,
-  InputLabel,
-  InputAdornment,
-  FormControl,
   TextField,
+  InputLabel,
+  IconButton,
+  FormControl,
+  OutlinedInput,
   FormHelperText,
+  InputAdornment,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 
@@ -32,7 +32,7 @@ function InputLogin({
 
   const handleErrorUse = (text) => {
     setUser(text);
-    let reg = /^[a-zA-Z]+$/;
+    let reg = /^[a-zA-Z ]+$/;
 
     if (reg.test(text) || text.length === 0) {
       setLabelUser("User Name");

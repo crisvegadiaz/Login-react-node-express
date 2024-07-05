@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, RutaProtegida } from "./context/AuthContext";
+import CreateUser from "./pages/CreateUser";
 import ReactDOM from "react-dom/client";
 import Error404 from "./pages/Error404";
 import Mensaje from "./pages/Mensaje";
@@ -13,6 +14,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Login />} />
+          <Route path="/creandoUser" element={<CreateUser/>} />
           <Route path="/mensaje" element={<RutaProtegida element={<Mensaje />} />} />
           <Route path="*" element={<Error404 />} />
         </Routes>

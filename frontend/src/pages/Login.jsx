@@ -3,7 +3,7 @@ import AvatarLogin from "../components/AvatarLogin";
 import InputLogin from "../components/InputLogin";
 import { useAuth } from "../context/AuthContext";
 import EastIcon from "@mui/icons-material/East";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import "../styles/login.css";
 
@@ -63,7 +63,8 @@ function Login() {
   }, [hasErrorPass, hasErrorUser, password, user]);
 
   return (
-    <div className="containedLogin">
+    <section className="containedLogin">
+      <Link className="btnCreateUser" to="/creandoUser">Create user</Link>
       <form onSubmit={handleLoginSubmit}>
         <AvatarLogin
           useAva={
@@ -97,7 +98,7 @@ function Login() {
           {isLoading ? "Cargando..." : "Login"}
         </Button>
       </form>
-    </div>
+    </section>
   );
 }
 
