@@ -133,6 +133,31 @@ El servidor es configurado y arrancado de la siguiente manera:
         });
         ```
 
+    - **Crear usuario**:
+        ```javascript
+        app.post("/creandoUser", async (req, res) => {
+            try {
+                const { name, phoneNumber, email, password } = req.body;
+
+                const create = await UsersModel.createUser({
+                    name,
+                    phoneNumber,
+                    email,
+                    password,
+                });
+
+                if (create) {
+                    res.json({ create: true });
+                } else {
+                    res.status(203).json({ create: false });
+                }
+            } catch (error) {
+                console.error(`Error en la ruta de creación de usuario: ${error.message}`);
+                res.status(500).json({ success: false, error: "Error interno del servidor" });
+            }
+        });
+        ```
+
     - **Verificar autenticación**:
         ```javascript
         app.get("/check-auth", (req, res) => {
@@ -169,6 +194,85 @@ El servidor es configurado y arrancado de la siguiente manera:
     https.createServer(options, app).listen(PORT, () => {
         console.log(`Servidor HTTPS escuchando en https://localhost:${PORT}`);
     });
+    ```
+
+## Modelo de Usuario (conecSql.js)
+
+El archivo `conecSql.js` gestiona la conexión a la base de datos y define el modelo de usuario.
+
+### Inicialización de la Conexión
+
+La conexión a la base de datos se establece usando `mysql.createPool()`:
+```javascript
+import mysql from "mysql2/promise";
+import dotenv from "dotenv";
+
+dotenv.config();
+let connection;
+
+async function initializeConnection() {
+    try {
+        connection = mysql.createPool({
+            host: process.env.DB_HOST,
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            port: process.env.DB_PORT,
+            database: process.env.DB_NAME,
+            waitForConnections: true,
+            connectionLimit: 10,
+            queueLimit: 0,
+        });
+        console.log("Conectado con éxito a la base de datos");
+    } catch (error) {
+        console.error("Error al crear el grupo de conexiones:", error);
+        process.exit(1); // Exit process with failure
+    }
+}
+
+initializeConnection();
+```
+
+### Métodos del Modelo de Usuario
+
+- **getUserExists**: Verifica si un usuario existe en la base de datos.
+    ```javascript
+    static async getUserExists({ name, password }) {
+        try {
+            if (!connection) {
+                throw new Error("No se ha establecido la conexión con la base de datos");
+            }
+
+            const [rows] = await connection.query(
+                `SELECT EXISTS(SELECT 1 FROM users WHERE user_name = ? AND password = SHA2(?, 256)) AS user_exists;`,
+                [name, password]
+            );
+            return rows[0].user_exists;
+        } catch (error) {
+            console.error(`Error en la consulta getUserExists: ${error.message}`);
+            throw new Error(`Error en la consulta getUserExists: ${error.message}`);
+        }
+    }
+    ```
+
+- **createUser**: Crea un nuevo usuario en la base de datos.
+    ```javascript
+    static async createUser({ name, phoneNumber, email, password }) {
+        try {
+            if (!connection) {
+                throw new Error("No se ha establecido la conexión con la base de datos");
+            }
+
+            const [result] = await connection.query(
+                `INSERT INTO users (user_name, phoneNumber, email, password) VALUES (?, ?, ?, SHA2(?, 256))`,
+                [name, phoneNumber, email, password]
+            );
+
+            return result.affectedRows > 0;
+        } catch (error) {
+            console.error(`Error en la consulta createUser: ${error.message}`);
+            return false;
+        }
+    }
     ```
 
 ## Conexión a la Base de Datos
@@ -237,6 +341,7 @@ La conexión a la base de datos se maneja en el archivo `conecSql.js`:
 
     export default UsersModel;
     ```
+
 # Documentación de la Base de Datos
 
 Esta sección describe la configuración de la base de datos de la aplicación. Utiliza MySQL y está configurada para ejecutarse dentro de un contenedor Docker. La configuración incluye la creación de la base de datos y una tabla de usuarios, así como la inserción de datos de prueba.
@@ -295,20 +400,49 @@ USE users_db;
 -- crear la tabla users
 CREATE TABLE IF NOT EXISTS users (
   id BINARY(16) PRIMARY KEY DEFAULT (UUID_TO_BIN(UUID())),
-  user_name VARCHAR(30) COLLATE utf8_bin NOT NULL CHECK (user_name REGEXP '^[a-zA-Z]+$'),
+  user_name VARCHAR(50) COLLATE utf8_bin NOT NULL CHECK (user_name REGEXP '^[a-zA-Z ]+$'),
+  phoneNumber VARCHAR(15) COLLATE utf8_bin NOT NULL CHECK (phoneNumber REGEXP '^[0-9]{8,15}$'),
+  email VARCHAR(100) COLLATE utf8_bin NOT NULL CHECK (
+    email REGEXP '[a-zA-Z0-9_]+([.][a-zA-Z0-9_]+)*@[a-zA-Z0-9_]+([.][a-zA-Z0-9_]+)*[.][a-zA-Z]{2,5}'
+  ),
   password VARCHAR(64) COLLATE utf8_bin NOT NULL,
   UNIQUE (user_name, password)
 );
 
 -- ingreso de datos de prueba a tabla users
 INSERT INTO
-  users (user_name, password)
+  users (user_name, phoneNumber, email, password)
 VALUES
-  ('Juan', SHA2('123', 256)),
-  ('Maria', SHA2('abc', 256)),
-  ('maria', SHA2('abc', 256)),
-  ('Pedro', SHA2('123abc', 256)),
-  ('Pedro', SHA2('123Abc', 256));
+  (
+    'Juan Perez',
+    '1234567890',
+    'juan.perez@example.com',
+    SHA2('123', 256)
+  ),
+  (
+    'Maria Garcia',
+    '0987654321',
+    'maria.garcia@example.com',
+    SHA2('abc', 256)
+  ),
+  (
+    'Pedro Martinez',
+    '1112223333',
+    'pedro.martinez@example.com',
+    SHA2('123abc', 256)
+  ),
+  (
+    'Ana Lopez',
+    '2223334444',
+    'ana.lopez@example.com',
+    SHA2('password', 256)
+  ),
+  (
+    'Luis Rodriguez',
+    '3334445555',
+    'luis.rodriguez@example.com',
+    SHA2('password123', 256)
+  );
 ```
 
 ### Descripción de las instrucciones SQL
@@ -317,10 +451,12 @@ VALUES
 - **USE users_db**: Selecciona la base de datos `users_db` para usarla.
 - **CREATE TABLE IF NOT EXISTS users**: Crea la tabla `users` con las siguientes columnas:
   - `id`: Identificador único (UUID).
-  - `user_name`: Nombre de usuario (debe contener solo letras).
+  - `user_name`: Nombre de usuario (debe contener solo letras y espacios).
+  - `phoneNumber`: Número de teléfono (debe contener entre 8 y 15 dígitos).
+  - `email`: Dirección de correo electrónico (con una estructura válida).
   - `password`: Contraseña (almacenada como hash SHA-256).
   - Define una restricción única en `user_name` y `password`.
-- **INSERT INTO users (user_name, password) VALUES**: Inserta datos de prueba en la tabla `users`. Las contraseñas se almacenan como hashes SHA-256.
+- **INSERT INTO users (user_name, phoneNumber, email, password) VALUES**: Inserta datos de prueba en la tabla `users`. Las contraseñas se almacenan como hashes SHA-256.
 
 ## Cómo Ejecutar
 
